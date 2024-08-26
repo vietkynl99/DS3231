@@ -51,6 +51,15 @@ public:
     // OBTAIN TRUE UNIX TIME SINCE EPOCH, YOU MUST CALL THIS COMMAND AFTER
     // SETTING YOUR CLOCK TO UTC
     uint32_t unixtime(void) const;
+
+	String toTimeString();
+	String toDateString();
+	String toString();
+	
+	bool isTimeValid();
+	bool isDateValid();
+	bool isValid();
+
 protected:
     uint8_t yOff, m, d, hh, mm, ss;
 };

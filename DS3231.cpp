@@ -153,6 +153,52 @@ uint32_t DateTime::unixtime(void) const {
   return t;
 }
 
+String DateTime::toTimeString()
+{
+	return String(hh / 10) + String(hh % 10) + ":" + String(mm / 10) + String(mm % 10) + ":" + String(ss / 10) + String(ss % 10);
+}
+
+String DateTime::toDateString()
+{
+	return String(d / 10) + String(d % 10) + "/" + String(m / 10) + String(m % 10) + "/" + String(yOff + 2000);
+}
+
+String DateTime::toString()
+{
+	return toTimeString() + " " + toDateString();
+}
+
+bool DateTime::isTimeValid()
+{
+	return hh >= 0 && hh <= 23 &&
+			mm >= 0 && mm <= 59 &&
+			ss >= 0 && ss <= 59;
+}
+
+bool DateTime::isDateValid()
+{
+	if (m < 1 || m > 12 || d < 1 || d > 31)
+	{
+		return false;
+	}
+
+	int maxDays = 31;
+	if (m == 4 || m == 6 || m == 9 || m == 11)
+	{
+		maxDays = 30;
+	}
+	else if (m == 2)
+	{
+		maxDays = yOff % 4 == 0 ? 29 : 28;
+	}
+	return (d <= maxDays);
+}
+
+bool DateTime::isValid()
+{
+	return isTimeValid() && isDateValid();
+}
+
 // Slightly modified from JeeLabs / Ladyada
 // Get all date/time at once to avoid rollover (e.g., minute/second don't match)
 static uint8_t bcd2bin (uint8_t val) { return val - 6 * (val >> 4); }
