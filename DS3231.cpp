@@ -197,7 +197,7 @@ bool DateTime::isDateValid()
 	}
 	else if (m == 2)
 	{
-		maxDays = yOff % 4 == 0 ? 29 : 28;
+		maxDays = isleapYear(yOff + 2000) ? 29 : 28;
 	}
 	return (d <= maxDays);
 }
@@ -228,7 +228,10 @@ DateTime RTClib::now(TwoWire &_Wire)
 	_Wire.beginTransmission(CLOCK_ADDRESS);
 	_Wire.write(0); // This is the first register address (Seconds)
 					// We'll read from here on for 7 bytes: secs reg, minutes reg, hours, days, months and years.
-	_Wire.endTransmission();
+	if (_Wire.endTransmission())
+	{
+		return DateTime(-1, -1, -1, -1, -1, -1);
+	}
 
 	_Wire.requestFrom(CLOCK_ADDRESS, 7);
 	uint16_t ss = bcd2bin(_Wire.read() & 0x7F);
@@ -248,7 +251,10 @@ byte DS3231::getSecond()
 {
 	_Wire.beginTransmission(CLOCK_ADDRESS);
 	_Wire.write(0x00);
-	_Wire.endTransmission();
+	if (_Wire.endTransmission())
+	{
+		return -1;
+	}
 
 	_Wire.requestFrom(CLOCK_ADDRESS, 1);
 	return bcdToDec(_Wire.read());
@@ -258,7 +264,10 @@ byte DS3231::getMinute()
 {
 	_Wire.beginTransmission(CLOCK_ADDRESS);
 	_Wire.write(0x01);
-	_Wire.endTransmission();
+	if (_Wire.endTransmission())
+	{
+		return -1;
+	}
 
 	_Wire.requestFrom(CLOCK_ADDRESS, 1);
 	return bcdToDec(_Wire.read());
@@ -270,7 +279,10 @@ byte DS3231::getHour(bool &h12, bool &PM_time)
 	byte hour;
 	_Wire.beginTransmission(CLOCK_ADDRESS);
 	_Wire.write(0x02);
-	_Wire.endTransmission();
+	if (_Wire.endTransmission())
+	{
+		return -1;
+	}
 
 	_Wire.requestFrom(CLOCK_ADDRESS, 1);
 	temp_buffer = _Wire.read();
@@ -291,7 +303,10 @@ byte DS3231::getDoW()
 {
 	_Wire.beginTransmission(CLOCK_ADDRESS);
 	_Wire.write(0x03);
-	_Wire.endTransmission();
+	if (_Wire.endTransmission())
+	{
+		return -1;
+	}
 
 	_Wire.requestFrom(CLOCK_ADDRESS, 1);
 	return bcdToDec(_Wire.read());
@@ -301,7 +316,10 @@ byte DS3231::getDate()
 {
 	_Wire.beginTransmission(CLOCK_ADDRESS);
 	_Wire.write(0x04);
-	_Wire.endTransmission();
+	if (_Wire.endTransmission())
+	{
+		return -1;
+	}
 
 	_Wire.requestFrom(CLOCK_ADDRESS, 1);
 	return bcdToDec(_Wire.read());
@@ -312,7 +330,10 @@ byte DS3231::getMonth(bool &Century)
 	byte temp_buffer;
 	_Wire.beginTransmission(CLOCK_ADDRESS);
 	_Wire.write(0x05);
-	_Wire.endTransmission();
+	if (_Wire.endTransmission())
+	{
+		return -1;
+	}
 
 	_Wire.requestFrom(CLOCK_ADDRESS, 1);
 	temp_buffer = _Wire.read();
@@ -324,7 +345,10 @@ byte DS3231::getYear()
 {
 	_Wire.beginTransmission(CLOCK_ADDRESS);
 	_Wire.write(0x06);
-	_Wire.endTransmission();
+	if (_Wire.endTransmission())
+	{
+		return -1;
+	}
 
 	_Wire.requestFrom(CLOCK_ADDRESS, 1);
 	return bcdToDec(_Wire.read());
@@ -333,7 +357,7 @@ byte DS3231::getYear()
 // setEpoch function gives the epoch as parameter and feeds the RTC
 // epoch = UnixTime and starts at 01.01.1970 00:00:00
 // HINT: => the AVR time.h Lib is based on the year 2000
-void DS3231::setEpoch(time_t epoch, bool flag_localtime)
+bool DS3231::setEpoch(time_t epoch, bool flag_localtime)
 {
 #if defined(__AVR__)
 	epoch -= SECONDS_FROM_1970_TO_2000;
@@ -347,16 +371,38 @@ void DS3231::setEpoch(time_t epoch, bool flag_localtime)
 	{
 		gmtime_r(&epoch, &tmnow);
 	}
-	setSecond(tmnow.tm_sec);
-	setMinute(tmnow.tm_min);
-	setHour(tmnow.tm_hour);
-	setDoW(tmnow.tm_wday + 1U);
-	setDate(tmnow.tm_mday);
-	setMonth(tmnow.tm_mon + 1U);
-	setYear(tmnow.tm_year - 100U);
+	if (!setSecond(tmnow.tm_sec))
+	{
+		return false;
+	}
+	if (!setMinute(tmnow.tm_min))
+	{
+		return false;
+	}
+	if (!setHour(tmnow.tm_hour))
+	{
+		return false;
+	}
+	if (!setDoW(tmnow.tm_wday + 1U))
+	{
+		return false;
+	}
+	if (!setDate(tmnow.tm_mday))
+	{
+		return false;
+	}
+	if (!setMonth(tmnow.tm_mon + 1U))
+	{
+		return false;
+	}
+	if (!setYear(tmnow.tm_year - 100U))
+	{
+		return false;
+	}
+	return true;
 }
 
-void DS3231::setSecond(byte Second)
+bool DS3231::setSecond(byte Second)
 {
 	// Sets the seconds
 	// This function also resets the Oscillator Stop Flag, which is set
@@ -364,24 +410,31 @@ void DS3231::setSecond(byte Second)
 	_Wire.beginTransmission(CLOCK_ADDRESS);
 	_Wire.write(0x00);
 	_Wire.write(decToBcd(Second));
-	_Wire.endTransmission();
+	if (_Wire.endTransmission())
+	{
+		return false;
+	}
 	// Clear OSF flag
 	byte temp_buffer = readControlByte(1);
-	writeControlByte((temp_buffer & 0b01111111), 1);
+	return writeControlByte((temp_buffer & 0b01111111), 1);
 }
 
-void DS3231::setMinute(byte Minute)
+bool DS3231::setMinute(byte Minute)
 {
 	// Sets the minutes
 	_Wire.beginTransmission(CLOCK_ADDRESS);
 	_Wire.write(0x01);
 	_Wire.write(decToBcd(Minute));
-	_Wire.endTransmission();
+	if (_Wire.endTransmission())
+	{
+		return false;
+	}
+	return true;
 }
 
 // Following setHour revision by David Merrifield 4/14/2020 correcting handling of 12-hour clock
 
-void DS3231::setHour(byte Hour)
+bool DS3231::setHour(byte Hour)
 {
 	// Sets the hour, without changing 12/24h mode.
 	// The hour must be in 24h format.
@@ -392,7 +445,10 @@ void DS3231::setHour(byte Hour)
 	// Start by figuring out what the 12/24 mode is
 	_Wire.beginTransmission(CLOCK_ADDRESS);
 	_Wire.write(0x02);
-	_Wire.endTransmission();
+	if (_Wire.endTransmission())
+	{
+		return false;
+	}
 	_Wire.requestFrom(CLOCK_ADDRESS, 1);
 	h12 = (_Wire.read() & 0b01000000);
 	// if h12 is true, it's 12h mode; false is 24h.
@@ -421,46 +477,66 @@ void DS3231::setHour(byte Hour)
 	_Wire.beginTransmission(CLOCK_ADDRESS);
 	_Wire.write(0x02);
 	_Wire.write(temp_hour);
-	_Wire.endTransmission();
+	if (_Wire.endTransmission())
+	{
+		return false;
+	}
+	return true;
 }
 
-void DS3231::setDoW(byte DoW)
+bool DS3231::setDoW(byte DoW)
 {
 	// Sets the Day of Week
 	_Wire.beginTransmission(CLOCK_ADDRESS);
 	_Wire.write(0x03);
 	_Wire.write(decToBcd(DoW));
-	_Wire.endTransmission();
+	if (_Wire.endTransmission())
+	{
+		return false;
+	}
+	return true;
 }
 
-void DS3231::setDate(byte Date)
+bool DS3231::setDate(byte Date)
 {
 	// Sets the Date
 	_Wire.beginTransmission(CLOCK_ADDRESS);
 	_Wire.write(0x04);
 	_Wire.write(decToBcd(Date));
-	_Wire.endTransmission();
+	if (_Wire.endTransmission())
+	{
+		return false;
+	}
+	return true;
 }
 
-void DS3231::setMonth(byte Month)
+bool DS3231::setMonth(byte Month)
 {
 	// Sets the month
 	_Wire.beginTransmission(CLOCK_ADDRESS);
 	_Wire.write(0x05);
 	_Wire.write(decToBcd(Month));
-	_Wire.endTransmission();
+	if (_Wire.endTransmission())
+	{
+		return false;
+	}
+	return true;
 }
 
-void DS3231::setYear(byte Year)
+bool DS3231::setYear(byte Year)
 {
 	// Sets the year
 	_Wire.beginTransmission(CLOCK_ADDRESS);
 	_Wire.write(0x06);
 	_Wire.write(decToBcd(Year));
-	_Wire.endTransmission();
+	if (_Wire.endTransmission())
+	{
+		return false;
+	}
+	return true;
 }
 
-void DS3231::setClockMode(bool h12)
+bool DS3231::setClockMode(bool h12)
 {
 	// sets the mode to 12-hour (true) or 24-hour (false).
 	// One thing that bothers me about how I've written this is that
@@ -476,7 +552,10 @@ void DS3231::setClockMode(bool h12)
 	// Start by reading byte 0x02.
 	_Wire.beginTransmission(CLOCK_ADDRESS);
 	_Wire.write(0x02);
-	_Wire.endTransmission();
+	if (_Wire.endTransmission())
+	{
+		return false;
+	}
 	_Wire.requestFrom(CLOCK_ADDRESS, 1);
 	temp_buffer = _Wire.read();
 
@@ -494,7 +573,11 @@ void DS3231::setClockMode(bool h12)
 	_Wire.beginTransmission(CLOCK_ADDRESS);
 	_Wire.write(0x02);
 	_Wire.write(temp_buffer);
-	_Wire.endTransmission();
+	if (_Wire.endTransmission())
+	{
+		return false;
+	}
+	return true;
 }
 
 float DS3231::getTemperature()
@@ -506,12 +589,15 @@ float DS3231::getTemperature()
 	// http://forum.arduino.cc/index.php/topic,22301.0.html
 
 	byte tMSB, tLSB;
-	float temp3231;
+	float temp3231 = -9999;
 
 	// temp registers (11h-12h) get updated automatically every 64s
 	_Wire.beginTransmission(CLOCK_ADDRESS);
 	_Wire.write(0x11);
-	_Wire.endTransmission();
+	if (_Wire.endTransmission())
+	{
+		return -9999;
+	}
 	_Wire.requestFrom(CLOCK_ADDRESS, 2);
 
 	// Should I do more "if available" checks here?
@@ -531,12 +617,15 @@ float DS3231::getTemperature()
 	return temp3231;
 }
 
-void DS3231::getA1Time(byte &A1Day, byte &A1Hour, byte &A1Minute, byte &A1Second, byte &AlarmBits, bool &A1Dy, bool &A1h12, bool &A1PM)
+bool DS3231::getA1Time(byte &A1Day, byte &A1Hour, byte &A1Minute, byte &A1Second, byte &AlarmBits, bool &A1Dy, bool &A1h12, bool &A1PM)
 {
 	byte temp_buffer;
 	_Wire.beginTransmission(CLOCK_ADDRESS);
 	_Wire.write(0x07);
-	_Wire.endTransmission();
+	if (_Wire.endTransmission())
+	{
+		return false;
+	}
 
 	_Wire.requestFrom(CLOCK_ADDRESS, 4);
 
@@ -580,23 +669,27 @@ void DS3231::getA1Time(byte &A1Day, byte &A1Hour, byte &A1Minute, byte &A1Second
 		// alarm is by date, not day of week.
 		A1Day = bcdToDec(temp_buffer & 0b00111111);
 	}
+	return true;
 }
 
-void DS3231::getA1Time(byte &A1Day, byte &A1Hour, byte &A1Minute, byte &A1Second, byte &AlarmBits, bool &A1Dy, bool &A1h12, bool &A1PM, bool clearAlarmBits)
+bool DS3231::getA1Time(byte &A1Day, byte &A1Hour, byte &A1Minute, byte &A1Second, byte &AlarmBits, bool &A1Dy, bool &A1h12, bool &A1PM, bool clearAlarmBits)
 {
 	if (clearAlarmBits)
 	{
 		AlarmBits = 0x0;
 	}
-	getA1Time(A1Day, A1Hour, A1Minute, A1Second, AlarmBits, A1Dy, A1h12, A1PM);
+	return getA1Time(A1Day, A1Hour, A1Minute, A1Second, AlarmBits, A1Dy, A1h12, A1PM);
 }
 
-void DS3231::getA2Time(byte &A2Day, byte &A2Hour, byte &A2Minute, byte &AlarmBits, bool &A2Dy, bool &A2h12, bool &A2PM)
+bool DS3231::getA2Time(byte &A2Day, byte &A2Hour, byte &A2Minute, byte &AlarmBits, bool &A2Dy, bool &A2h12, bool &A2PM)
 {
 	byte temp_buffer;
 	_Wire.beginTransmission(CLOCK_ADDRESS);
 	_Wire.write(0x0b);
-	_Wire.endTransmission();
+	if (_Wire.endTransmission())
+	{
+		return false;
+	}
 
 	_Wire.requestFrom(CLOCK_ADDRESS, 3);
 	temp_buffer = _Wire.read(); // Get A2M2 and A2 Minutes
@@ -634,18 +727,19 @@ void DS3231::getA2Time(byte &A2Day, byte &A2Hour, byte &A2Minute, byte &AlarmBit
 		// alarm is by date, not day of week.
 		A2Day = bcdToDec(temp_buffer & 0b00111111);
 	}
+	return true;
 }
 
-void DS3231::getA2Time(byte &A2Day, byte &A2Hour, byte &A2Minute, byte &AlarmBits, bool &A2Dy, bool &A2h12, bool &A2PM, bool clearAlarmBits)
+bool DS3231::getA2Time(byte &A2Day, byte &A2Hour, byte &A2Minute, byte &AlarmBits, bool &A2Dy, bool &A2h12, bool &A2PM, bool clearAlarmBits)
 {
 	if (clearAlarmBits)
 	{
 		AlarmBits = 0x0;
 	}
-	getA2Time(A2Day, A2Hour, A2Minute, AlarmBits, A2Dy, A2h12, A2PM);
+	return getA2Time(A2Day, A2Hour, A2Minute, AlarmBits, A2Dy, A2h12, A2PM);
 }
 
-void DS3231::setA1Time(byte A1Day, byte A1Hour, byte A1Minute, byte A1Second, byte AlarmBits, bool A1Dy, bool A1h12, bool A1PM)
+bool DS3231::setA1Time(byte A1Day, byte A1Hour, byte A1Minute, byte A1Second, byte AlarmBits, bool A1Dy, bool A1h12, bool A1PM)
 {
 	//	Sets the alarm-1 date and time on the DS3231, using A1* information
 	byte temp_buffer;
@@ -695,10 +789,14 @@ void DS3231::setA1Time(byte A1Day, byte A1Hour, byte A1Minute, byte A1Second, by
 	}
 	_Wire.write(temp_buffer);
 	// All done!
-	_Wire.endTransmission();
+	if (_Wire.endTransmission())
+	{
+		return false;
+	}
+	return true;
 }
 
-void DS3231::setA2Time(byte A2Day, byte A2Hour, byte A2Minute, byte AlarmBits, bool A2Dy, bool A2h12, bool A2PM)
+bool DS3231::setA2Time(byte A2Day, byte A2Hour, byte A2Minute, byte AlarmBits, bool A2Dy, bool A2h12, bool A2PM)
 {
 	//	Sets the alarm-2 date and time on the DS3231, using A2* information
 	byte temp_buffer;
@@ -747,10 +845,14 @@ void DS3231::setA2Time(byte A2Day, byte A2Hour, byte A2Minute, byte AlarmBits, b
 	}
 	_Wire.write(temp_buffer);
 	// All done!
-	_Wire.endTransmission();
+	if (_Wire.endTransmission())
+	{
+		return false;
+	}
+	return true;
 }
 
-void DS3231::turnOnAlarm(byte Alarm)
+bool DS3231::turnOnAlarm(byte Alarm)
 {
 	// turns on alarm number "Alarm". Defaults to 2 if Alarm is not 1.
 	byte temp_buffer = readControlByte(0);
@@ -763,10 +865,10 @@ void DS3231::turnOnAlarm(byte Alarm)
 	{
 		temp_buffer = temp_buffer | 0b00000110;
 	}
-	writeControlByte(temp_buffer, 0);
+	return writeControlByte(temp_buffer, 0);
 }
 
-void DS3231::turnOffAlarm(byte Alarm)
+bool DS3231::turnOffAlarm(byte Alarm)
 {
 	// turns off alarm number "Alarm". Defaults to 2 if Alarm is not 1.
 	// Leaves interrupt pin alone.
@@ -780,7 +882,7 @@ void DS3231::turnOffAlarm(byte Alarm)
 	{
 		temp_buffer = temp_buffer & 0b11111101;
 	}
-	writeControlByte(temp_buffer, 0);
+	return writeControlByte(temp_buffer, 0);
 }
 
 bool DS3231::checkAlarmEnabled(byte Alarm)
@@ -820,7 +922,10 @@ bool DS3231::checkIfAlarm(byte Alarm)
 		// clear flag
 		temp_buffer = temp_buffer & 0b11111101;
 	}
-	writeControlByte(temp_buffer, 1);
+	if (!writeControlByte(temp_buffer, 1))
+	{
+		return false;
+	}
 	return result;
 }
 
@@ -847,12 +952,15 @@ bool DS3231::checkIfAlarm(byte Alarm, bool clearflag)
 	}
 	if (clearflag)
 	{
-		writeControlByte(temp_buffer, 1);
+		if (!writeControlByte(temp_buffer, 1))
+		{
+			return false;
+		}
 	}
 	return result;
 }
 
-void DS3231::enableOscillator(bool TF, bool battery, byte frequency)
+bool DS3231::enableOscillator(bool TF, bool battery, byte frequency)
 {
 	// turns oscillator on or off. True is on, false is off.
 	// if battery is true, turns on even for battery-only operation,
@@ -890,10 +998,10 @@ void DS3231::enableOscillator(bool TF, bool battery, byte frequency)
 	frequency = frequency << 3;
 	temp_buffer = temp_buffer | frequency;
 	// And write the control bits
-	writeControlByte(temp_buffer, 0);
+	return writeControlByte(temp_buffer, 0);
 }
 
-void DS3231::enable32kHz(bool TF)
+bool DS3231::enable32kHz(bool TF)
 {
 	// turn 32kHz pin on or off
 	byte temp_buffer = readControlByte(1);
@@ -907,7 +1015,7 @@ void DS3231::enable32kHz(bool TF)
 		// turn off 32kHz pin
 		temp_buffer = temp_buffer & 0b11110111;
 	}
-	writeControlByte(temp_buffer, 1);
+	return writeControlByte(temp_buffer, 1);
 }
 
 bool DS3231::oscillatorCheck()
@@ -955,12 +1063,15 @@ byte DS3231::readControlByte(bool which)
 		// first control byte
 		_Wire.write(0x0e);
 	}
-	_Wire.endTransmission();
+	if (_Wire.endTransmission())
+	{
+		return -1;
+	}
 	_Wire.requestFrom(CLOCK_ADDRESS, 1);
 	return _Wire.read();
 }
 
-void DS3231::writeControlByte(byte control, bool which)
+bool DS3231::writeControlByte(byte control, bool which)
 {
 	// Write the selected control byte.
 	// which=false -> 0x0e, true->0x0f.
@@ -974,5 +1085,9 @@ void DS3231::writeControlByte(byte control, bool which)
 		_Wire.write(0x0e);
 	}
 	_Wire.write(control);
-	_Wire.endTransmission();
+	if (_Wire.endTransmission())
+	{
+		return false;
+	}
+	return true;
 }

@@ -106,24 +106,24 @@ public:
 
 	// set epoch function gives the epoch as parameter and feeds the RTC
 	// epoch = UnixTime and starts at 01.01.1970 00:00:00
-	void setEpoch(time_t epoch = 0, bool flag_localtime = false);
+	bool setEpoch(time_t epoch = 0, bool flag_localtime = false);
 
-	void setSecond(byte Second);
+	bool setSecond(byte Second);
 	// In addition to setting the seconds, this clears the
 	// "Oscillator Stop Flag".
-	void setMinute(byte Minute);
+	bool setMinute(byte Minute);
 	// Sets the minute
-	void setHour(byte Hour);
+	bool setHour(byte Hour);
 	// Sets the hour
-	void setDoW(byte DoW);
+	bool setDoW(byte DoW);
 	// Sets the Day of the Week (1-7);
-	void setDate(byte Date);
+	bool setDate(byte Date);
 	// Sets the Date of the Month
-	void setMonth(byte Month);
+	bool setMonth(byte Month);
 	// Sets the Month of the year
-	void setYear(byte Year);
+	bool setYear(byte Year);
 	// Last two digits of the year
-	void setClockMode(bool h12);
+	bool setClockMode(bool h12);
 	// Set 12/24h mode. True is 12-h, false is 24-hour.
 
 	// Temperature function
@@ -132,7 +132,7 @@ public:
 
 	// Alarm functions
 
-	void getA1Time(byte &A1Day, byte &A1Hour, byte &A1Minute, byte &A1Second, byte &AlarmBits, bool &A1Dy, bool &A1h12, bool &A1PM);
+	bool getA1Time(byte &A1Day, byte &A1Hour, byte &A1Minute, byte &A1Second, byte &AlarmBits, bool &A1Dy, bool &A1h12, bool &A1PM);
 	/* Retrieves everything you could want to know about alarm
 	 * one.
 	 * A1Dy true makes the alarm go on A1Day = Day of Week,
@@ -159,20 +159,20 @@ public:
 	 *	Use the flag bool clearAlarmBits=True to explicitly clear byte AlarmBits on
 	 *  call to getAXTime.
 	 */
-	void getA2Time(byte &A2Day, byte &A2Hour, byte &A2Minute, byte &AlarmBits, bool &A2Dy, bool &A2h12, bool &A2PM);
+	bool getA2Time(byte &A2Day, byte &A2Hour, byte &A2Minute, byte &AlarmBits, bool &A2Dy, bool &A2h12, bool &A2PM);
 	// Same as getA1Time();, but A2 only goes on seconds == 00.
-	void getA1Time(byte &A1Day, byte &A1Hour, byte &A1Minute, byte &A1Second, byte &AlarmBits, bool &A1Dy, bool &A1h12, bool &A1PM, bool clearAlarmBits);
+	bool getA1Time(byte &A1Day, byte &A1Hour, byte &A1Minute, byte &A1Second, byte &AlarmBits, bool &A1Dy, bool &A1h12, bool &A1PM, bool clearAlarmBits);
 	// Same as getA1Time();, but clears byte AlarmBits.
-	void getA2Time(byte &A1Day, byte &A1Hour, byte &A1Minute, byte &AlarmBits, bool &A1Dy, bool &A1h12, bool &A1PM, bool clearAlarmBits);
+	bool getA2Time(byte &A1Day, byte &A1Hour, byte &A1Minute, byte &AlarmBits, bool &A1Dy, bool &A1h12, bool &A1PM, bool clearAlarmBits);
 	// Same as getA1Time();, but clears byte AlarmBits.
-	void setA1Time(byte A1Day, byte A1Hour, byte A1Minute, byte A1Second, byte AlarmBits, bool A1Dy, bool A1h12, bool A1PM);
+	bool setA1Time(byte A1Day, byte A1Hour, byte A1Minute, byte A1Second, byte AlarmBits, bool A1Dy, bool A1h12, bool A1PM);
 	// Set the details for Alarm 1
-	void setA2Time(byte A2Day, byte A2Hour, byte A2Minute, byte AlarmBits, bool A2Dy, bool A2h12, bool A2PM);
+	bool setA2Time(byte A2Day, byte A2Hour, byte A2Minute, byte AlarmBits, bool A2Dy, bool A2h12, bool A2PM);
 	// Set the details for Alarm 2
-	void turnOnAlarm(byte Alarm);
+	bool turnOnAlarm(byte Alarm);
 	// Enables alarm 1 or 2 and the external interrupt pin.
 	// If Alarm != 1, it assumes Alarm == 2.
-	void turnOffAlarm(byte Alarm);
+	bool turnOffAlarm(byte Alarm);
 	// Disables alarm 1 or 2 (default is 2 if Alarm != 1);
 	// and leaves the interrupt pin alone.
 	bool checkAlarmEnabled(byte Alarm);
@@ -187,7 +187,7 @@ public:
 
 	// Oscillator functions
 
-	void enableOscillator(bool TF, bool battery, byte frequency);
+	bool enableOscillator(bool TF, bool battery, byte frequency);
 	// turns oscillator on or off. True is on, false is off.
 	// if battery is true, turns on even for battery-only operation,
 	// otherwise turns off if Vcc is off.
@@ -196,7 +196,7 @@ public:
 	// 1 = 1.024 kHz
 	// 2 = 4.096 kHz
 	// 3 = 8.192 kHz (Default if frequency byte is out of range);
-	void enable32kHz(bool TF);
+	bool enable32kHz(bool TF);
 	// Turns the 32kHz output pin on (true); or off (false).
 	bool oscillatorCheck();
 	// Checks the status of the OSF (Oscillator Stop Flag);.
@@ -213,7 +213,7 @@ private:
 protected:
 	byte readControlByte(bool which);
 	// Read selected control byte: (0); reads 0x0e, (1) reads 0x0f
-	void writeControlByte(byte control, bool which);
+	bool writeControlByte(byte control, bool which);
 	// Write the selected control byte.
 	// which == false -> 0x0e, true->0x0f.
 };
