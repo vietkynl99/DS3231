@@ -40,8 +40,6 @@ Released into the public domain.
 // #include "WProgram.h"
 #include <Arduino.h>
 
-#define CLOCK_ADDRESS 0x68
-
 #define SECONDS_FROM_1970_TO_2000 946684800
 
 // Constructor

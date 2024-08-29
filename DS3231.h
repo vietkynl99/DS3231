@@ -28,6 +28,8 @@
 #include <time.h>
 #include <Wire.h>
 
+#define CLOCK_ADDRESS 0x68
+
 // DateTime (get everything at once) from JeeLabs / Adafruit
 // Simple general-purpose date/time class (no TZ / DST / leap second handling!)
 class DateTime
