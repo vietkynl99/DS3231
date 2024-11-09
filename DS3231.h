@@ -47,6 +47,13 @@ public:
 	uint8_t second() const { return ss; }
 	uint8_t dayOfTheWeek() const;
 
+	void setYear(uint16_t year) { yOff = year - 2000; }
+	void setMonth(uint8_t month) { m = month; }
+	void setDay(uint8_t day) { d = day; }
+	void setHour(uint8_t hour) { hh = hour; }
+	void setMinute(uint8_t min) { mm = min; }
+	void setSecond(uint8_t sec) { ss = sec; }
+
 	// 32-bit times as seconds since 1/1/2000
 	long secondstime() const;
 	// 32-bit times as seconds since 1/1/1970
